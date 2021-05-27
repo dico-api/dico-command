@@ -7,3 +7,7 @@ Command handler for dico.
 """
 
 __version__ = "0.0.1"
+
+from .bot import *
+from .command import *
+from .context import *
