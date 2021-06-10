@@ -5,9 +5,14 @@ from dico import Message, Embed, AllowedMentions, MessageReference
 
 
 class Context(Message):
+    def __init__(self, client, resp, prefix, command, **kwargs):
+        super().__init__(client, resp, **kwargs)
+        self.prefix = prefix
+        self.command = command
+
     @classmethod
-    def from_message(cls, message: Message):
-        return cls(message.client, message.raw)
+    def from_message(cls, message: Message, prefix, command):
+        return cls(message.client, message.raw, prefix, command)
 
     @property
     def bot(self):

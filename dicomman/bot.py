@@ -1,4 +1,5 @@
 import typing
+import inspect
 import logging
 import traceback
 import dico
@@ -9,31 +10,45 @@ from .context import Context
 class Bot(dico.Client):
     def __init__(self,
                  token: str,
-                 prefix: str, *,
+                 prefix: typing.Union[str, list, typing.Callable[[dico.Message], typing.Union[typing.Awaitable[str], str]]],
+                 *,
                  intents: dico.Intents = dico.Intents.no_privileged(),
                  default_allowed_mentions: dico.AllowedMentions = None,
                  loop=None,
                  cache: bool = True):
         super().__init__(token, intents=intents, default_allowed_mentions=default_allowed_mentions, loop=loop, cache=cache)
-        self.prefix = prefix
+        self.prefixes = [prefix] if not isinstance(prefix, list) else prefix
         self.commands = {}
         self.logger = logging.Logger("dicomman")
         self.on("MESSAGE_CREATE", self.execute_handler)
 
-    async def execute_handler(self, message: dico.Message):
-        if not message.content.startswith(self.prefix):
+    async def verify_prefix(self, message: dico.Message):
+        def is_coro(coro):
+            return inspect.iscoroutinefunction(coro) or inspect.isawaitable(coro) or inspect.iscoroutine(coro)
+        final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
+        prefix_result = [*map(lambda x: message.content.startswith(x), final_prefixes)]
+        if len(set(prefix_result)) != 2 and False in prefix_result:
             return
-        ipt = message.content.lstrip(self.prefix).split()
+        for i, r in enumerate(prefix_result):
+            if r is True:
+                return final_prefixes[i]
+
+    async def execute_handler(self, message: dico.Message):
+        cont = message.content
+        prefix_result = await self.verify_prefix(message)
+        if prefix_result is None:
+            return
+        ipt = cont[len(prefix_result):].split()
         name = ipt.pop(0)
         cmd = self.commands.get(name)
         if not cmd:
             return
-        context = Context.from_message(message)
+        context = Context.from_message(message, prefix_result, cmd)
         try:
             await cmd.invoke(context, *ipt)
             self.logger.debug(f"Command {name} executed.")
         except Exception as ex:
-            self.dispatch("command_error", context, ex)
+            self.handle_command_error(context, ex)
 
     def add_command(self, func: typing.Callable, name: str = None):
         name = name or func.__name__
@@ -45,3 +60,9 @@ class Bot(dico.Client):
         def wrap(func):
             return self.add_command(func, name)
         return wrap
+
+    def handle_command_error(self, context, ex):
+        if not self.events.get("command_error"):
+            self.logger.error(f"Error while executing command '{context.command.name}':\n"+''.join(traceback.format_exception(type(ex), ex, ex.__traceback__)))
+        else:
+            self.dispatch("command_error", context, ex)
