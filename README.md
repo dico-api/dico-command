@@ -16,3 +16,4 @@ async def test(ctx: dicomman.Context):
 
 bot.run()
 ```
+Note that using async is forced unlike dico itself.
