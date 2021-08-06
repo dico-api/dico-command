@@ -19,7 +19,7 @@ class Bot(dico.Client):
         super().__init__(token, intents=intents, default_allowed_mentions=default_allowed_mentions, loop=loop, cache=cache)
         self.prefixes = [prefix] if not isinstance(prefix, list) else prefix
         self.commands = {}
-        self.logger = logging.Logger("dicomman")
+        self.logger = logging.Logger("dico_command")
         self.on("MESSAGE_CREATE", self.execute_handler)
 
     async def verify_prefix(self, message: dico.Message):

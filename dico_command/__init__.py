@@ -1,5 +1,5 @@
 """
-dicomman
+dico_command
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Command handler for dico.
 :copyright: (c) 2021 eunwoo1104

@@ -1,18 +1,20 @@
-# dicomman
+# dico-command
 Command handler for dico.  
 **Note: Development of this project will be slow.**
 
 ## Example
+
 ```py
 import dico
-import dicomman
+import dico_command
 
-bot = dicomman.Bot("YOUR_TOKEN_HERE", "!", intents=dico.Intents.full())
+bot = dico_command.Bot("YOUR_TOKEN_HERE", "!", intents=dico.Intents.full())
 
 
 @bot.command("test")
-async def test(ctx: dicomman.Context):
+async def test(ctx: dico_command.Context):
     await ctx.send("Hello, World!")
+
 
 bot.run()
 ```
