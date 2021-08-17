@@ -1,13 +1,16 @@
+from .utils import read_function
+
+
 class Command:
     def __init__(self,
                  func,
                  name: str,
-                 args: iter = None,
                  checks: iter = None):
         self.func = func
         self.name = name
-        self.args = args or []
         self.checks = checks or []
 
-    def invoke(self, *args, **kwargs):
-        return self.func(*args, **kwargs)
+        self.args_data = read_function(self.func)
+
+    def invoke(self, ctx, *args, **kwargs):
+        return self.func(ctx, *args, **kwargs)

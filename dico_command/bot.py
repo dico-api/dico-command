@@ -5,6 +5,7 @@ import traceback
 import dico
 from .command import Command
 from .context import Context
+from .utils import smart_split
 
 
 class Bot(dico.Client):
@@ -38,15 +39,17 @@ class Bot(dico.Client):
         prefix_result = await self.verify_prefix(message)
         if prefix_result is None:
             return
-        ipt = cont[len(prefix_result):].split()
-        name = ipt.pop(0)
+        raw_ipt = cont[len(prefix_result):]
+        ipt = raw_ipt.split(maxsplit=1)
+        name = ipt[0]
         cmd = self.commands.get(name)
         if not cmd:
             return
         context = Context.from_message(message, prefix_result, cmd)
         try:
-            await cmd.invoke(context, *ipt)
+            args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data)
             self.logger.debug(f"Command {name} executed.")
+            await cmd.invoke(context, *args, **kwargs)
         except Exception as ex:
             self.handle_command_error(context, ex)
 
