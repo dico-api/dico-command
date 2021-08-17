@@ -33,7 +33,7 @@ def smart_split(ipt: str, args_data: dict, splitter: str = " ") -> typing.Tuple[
             return [ipt], {}
         else:
             return [initial_split[0]], {}
-    if len(initial_split) == len(args_data) or last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:  # assuming this matches
+    if (len(initial_split) == len(args_data) and not keyword_only_count) or last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:  # assuming this matches
         return initial_split, {}
     if len(initial_split) != len(args_data) and not var_positional_in and not keyword_only_count:
         raise ValueError("argument count does not match.")
@@ -46,7 +46,8 @@ def smart_split(ipt: str, args_data: dict, splitter: str = " ") -> typing.Tuple[
         if v["kind"] == v["kind"].KEYWORD_ONLY:
             if var_positional_in:
                 raise AttributeError("unable to mix positional-only and keyword-only params.")
-            kwargs[k] = ipt
+            kwargs[k] = ipt or None
+            # TODO: fix kwargs is added even if it is not present
             break
         args.append(initial_split[i])
         ipt = ipt.split(initial_split[i], 1)[-1].lstrip()
