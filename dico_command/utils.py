@@ -2,6 +2,10 @@ import typing
 import inspect
 
 
+def is_coro(coro):
+    return inspect.iscoroutinefunction(coro) or inspect.isawaitable(coro) or inspect.iscoroutine(coro)
+
+
 def read_function(func):
     params = [*inspect.signature(func).parameters.values()]
     if params[0].name in ["self", "cls"]:
@@ -41,6 +45,8 @@ def smart_split(ipt: str, args_data: dict, splitter: str = " ") -> typing.Tuple[
         raise AttributeError("maximum keyword-only param number is 1.")
     args = []
     kwargs = {}
+    if not ipt.replace(" ", ""):
+        raise ValueError("empty input.")
     for i, x in enumerate(args_data.items()):
         k, v = x
         if v["kind"] == v["kind"].KEYWORD_ONLY:

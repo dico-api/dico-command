@@ -5,7 +5,8 @@ import traceback
 import dico
 from .command import Command
 from .context import Context
-from .utils import smart_split
+from .exception import InvalidArgument
+from .utils import smart_split, is_coro
 
 
 class Bot(dico.Client):
@@ -24,8 +25,6 @@ class Bot(dico.Client):
         self.on("MESSAGE_CREATE", self.execute_handler)
 
     async def verify_prefix(self, message: dico.Message):
-        def is_coro(coro):
-            return inspect.iscoroutinefunction(coro) or inspect.isawaitable(coro) or inspect.iscoroutine(coro)
         final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
         prefix_result = [*map(lambda x: message.content.startswith(x), final_prefixes)]
         if len(set(prefix_result)) != 2 and False in prefix_result:
@@ -47,7 +46,10 @@ class Bot(dico.Client):
             return
         context = Context.from_message(message, prefix_result, cmd)
         try:
-            args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data)
+            try:
+                args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data)
+            except Exception as ex:
+                raise InvalidArgument from ex
             self.logger.debug(f"Command {name} executed.")
             await cmd.invoke(context, *args, **kwargs)
         except Exception as ex:

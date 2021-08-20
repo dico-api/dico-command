@@ -1,6 +1,7 @@
 import typing
 from .context import Context
-from .utils import read_function
+from .exception import CheckFailed
+from .utils import read_function, is_coro
 
 
 class Command:
@@ -16,11 +17,11 @@ class Command:
         if hasattr(func, "_checks"):
             self.checks.extend(func._checks)
 
-    def evaluate_checks(self, ctx: Context):
-        resp = [n for n in [x(ctx) for x in self.checks] if not n]
+    async def evaluate_checks(self, ctx: Context):
+        resp = [n for n in [(await x(ctx)) if is_coro(x) else x(ctx) for x in self.checks] if not n]
         return not resp
 
-    def invoke(self, ctx: Context, *args, **kwargs):
-        if not self.evaluate_checks(ctx):
-            raise
-        return self.func(ctx, *args, **kwargs)
+    async def invoke(self, ctx: Context, *args, **kwargs):
+        if not await self.evaluate_checks(ctx):
+            raise CheckFailed
+        return await self.func(ctx, *args, **kwargs)
