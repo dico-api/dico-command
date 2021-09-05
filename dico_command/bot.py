@@ -2,11 +2,15 @@ import typing
 import inspect
 import logging
 import traceback
+import importlib
 import dico
 from .command import Command
 from .context import Context
-from .exception import InvalidArgument
+from .exception import InvalidArgument, InvalidModule, MissingLoadFunction, MissingUnloadFunction, ModuleNotLoaded
 from .utils import smart_split, is_coro
+
+if typing.TYPE_CHECKING:
+    from .addon import Addon
 
 
 class Bot(dico.Client):
@@ -23,6 +27,9 @@ class Bot(dico.Client):
         self.commands = {}
         self.logger = logging.Logger("dico_command")
         self.on("MESSAGE_CREATE", self.execute_handler)
+        self.addons: typing.List[Addon] = []
+        self.addon_names: typing.List[str] = []
+        self.modules: typing.List[str] = []
 
     async def verify_prefix(self, message: dico.Message):
         final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
@@ -55,15 +62,22 @@ class Bot(dico.Client):
         except Exception as ex:
             self.handle_command_error(context, ex)
 
-    def add_command(self, func: typing.Callable, name: str = None):
-        name = name or func.__name__
-        cmd = Command(func, name)
-        self.commands[name] = cmd
-        return cmd
+    def add_command(self, command: Command):
+        if command.name in self.commands:
+            raise
+        self.commands[command.name] = command
+        return command
+
+    def remove_command(self, name: str):
+        if name not in self.commands:
+            raise
+        del self.commands[name]
 
     def command(self, name: str = None):
         def wrap(func):
-            return self.add_command(func, name)
+            cmd = Command(func, name or func.__name__)
+            self.add_command(cmd)
+            return cmd
         return wrap
 
     def handle_command_error(self, context, ex):
@@ -71,3 +85,62 @@ class Bot(dico.Client):
             self.logger.error(f"Error while executing command '{context.command.name}':\n"+''.join(traceback.format_exception(type(ex), ex, ex.__traceback__)))
         else:
             self.dispatch("command_error", context, ex)
+
+    def load_addons(self, *addons: typing.Type["Addon"]):
+        for x in addons:
+            if x.name in self.addon_names:
+                raise
+            self.addon_names.append(x.name)
+            loaded = x(self)
+            self.addons.append(loaded)
+            for c in loaded.commands:
+                c.register_addon(loaded)
+                self.add_command(c)
+            for e in loaded.listeners:
+                e.register_addon(loaded)
+                self.on_(e.event, e.func)
+
+    def unload_addons(self, *addons: typing.Union[str, typing.Type["Addon"]]):
+        for x in addons:
+            for i, n in enumerate(self.addon_names):
+                tgt = x if isinstance(x, str) else x.name
+                if n == tgt:
+                    del self.addon_names[i]
+                    addon = self.addons.pop(i)
+                    for c in addon.commands:
+                        self.remove_command(c.name)
+                    for e in addon.listeners:
+                        event_name = e.event.upper().lstrip("ON_")
+                        if self.events.get(event_name):
+                            self.events.remove(event_name, e.func)
+
+    def load_module(self, import_path: str):
+        try:
+            module = importlib.import_module(import_path)
+            importlib.reload(module)
+            self.modules.append(module.__name__)
+            if hasattr(module, "load"):
+                module.load(self)
+            else:
+                raise MissingLoadFunction
+        except ImportError:
+            raise InvalidModule
+
+    def unload_module(self, import_path: str):
+        try:
+            module = importlib.import_module(import_path)
+            importlib.reload(module)
+            if module.__name__ in self.modules:
+                if hasattr(module, "unload"):
+                    module.unload(self)
+                    self.modules.remove(module.__name__)
+                else:
+                    raise MissingUnloadFunction
+            else:
+                raise ModuleNotLoaded
+        except ImportError:
+            raise InvalidModule
+
+    def reload_module(self, import_path: str):
+        self.unload_module(import_path)
+        self.load_module(import_path)

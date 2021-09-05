@@ -13,3 +13,19 @@ class InvalidArgument(CommandException):
 
 class CheckFailed(CommandException):
     """Command check has failed."""
+
+
+class InvalidModule(CommandException):
+    """Unable to find module. Check if path is correct."""
+
+
+class ModuleNotLoaded(CommandException):
+    """This module is never loaded."""
+
+
+class MissingLoadFunction(CommandException):
+    """This module is missing "load" function."""
+
+
+class MissingUnloadFunction(CommandException):
+    """This module is missing "unload" function."""
