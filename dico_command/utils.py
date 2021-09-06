@@ -35,6 +35,8 @@ def smart_split(ipt: str, args_data: dict, splitter: str = " ") -> typing.Tuple[
     if len(args_data) == 1:
         if last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:
             return [ipt], {}
+        elif last_arg["kind"] == last_arg["kind"].KEYWORD_ONLY:
+            return [], {args_name[-1]: ipt}
         else:
             return [initial_split[0]], {}
     if (len(initial_split) == len(args_data) and not keyword_only_count) or last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:  # assuming this matches

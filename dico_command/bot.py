@@ -81,7 +81,7 @@ class Bot(dico.Client):
         return wrap
 
     def handle_command_error(self, context, ex):
-        if not self.events.get("command_error"):
+        if not self.events.get("COMMAND_ERROR"):
             self.logger.error(f"Error while executing command '{context.command.name}':\n"+''.join(traceback.format_exception(type(ex), ex, ex.__traceback__)))
         else:
             self.dispatch("command_error", context, ex)
