@@ -99,11 +99,18 @@ class Bot(dico.Client):
             for e in loaded.listeners:
                 e.register_addon(loaded)
                 self.on_(e.event, e.func)
+            if hasattr(self, "interaction"):
+                for t in loaded.interactions:
+                    t.register_self_or_cls(loaded)
+                    self.interaction.add_command(t)
+                for cc in loaded.callbacks:
+                    cc.register_self_or_cls(loaded)
+                    self.interaction.add_callback(cc)
 
     def unload_addons(self, *addons: typing.Union[str, typing.Type["Addon"]]):
         for x in addons:
+            tgt = x if isinstance(x, str) else x.name
             for i, n in enumerate(self.addon_names):
-                tgt = x if isinstance(x, str) else x.name
                 if n == tgt:
                     del self.addon_names[i]
                     addon = self.addons.pop(i)
@@ -113,6 +120,11 @@ class Bot(dico.Client):
                         event_name = e.event.upper().lstrip("ON_")
                         if self.events.get(event_name):
                             self.events.remove(event_name, e.func)
+                    if hasattr(self, "interaction"):
+                        for t in addon.interactions:
+                            self.interaction.remove_command(t)
+                        for cc in addon.callbacks:
+                            self.interaction.remove_callback(cc)
 
     def load_module(self, import_path: str):
         try:
@@ -129,7 +141,6 @@ class Bot(dico.Client):
     def unload_module(self, import_path: str):
         try:
             module = importlib.import_module(import_path)
-            importlib.reload(module)
             if module.__name__ in self.modules:
                 if hasattr(module, "unload"):
                     module.unload(self)
