@@ -1,6 +1,6 @@
 # dico-command
 Command handler for dico.  
-**Note: Development of this project will be slow.**
+**Note: Docs is still not ready.**
 
 ## Example
 
