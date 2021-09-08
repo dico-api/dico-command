@@ -8,10 +8,12 @@ class Command:
     def __init__(self,
                  func,
                  name: str,
-                 checks: typing.List[typing.Callable[[Context], bool]] = None):
+                 checks: typing.Optional[typing.List[typing.Callable[[Context], bool]]] = None,
+                 aliases: typing.Optional[typing.List[str]] = None):
         self.func = func
         self.name = name
         self.checks = checks or []
+        self.aliases = aliases or []
 
         self.args_data = read_function(self.func)
         if hasattr(func, "_checks"):
@@ -32,7 +34,7 @@ class Command:
         return await self.func(*init_args, *args, **kwargs)
 
 
-def command(name: str = None):
+def command(name: typing.Optional[str] = None, *, aliases: typing.Optional[typing.List[str]] = None):
     def wrap(func):
-        return Command(func, name)
+        return Command(func, name, aliases=aliases)
     return wrap

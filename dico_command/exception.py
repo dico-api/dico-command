@@ -3,8 +3,16 @@ from dico.exception import DicoException
 
 class CommandException(DicoException):
     """Base exception for dico-command."""
-    def __init__(self, *args):
-        super().__init__(*args or [self.__doc__])
+    def __init__(self, *args, **fmt):
+        super().__init__(*args or [self.__doc__.format(**fmt)])
+
+
+class CommandAlreadyExists(CommandException):
+    """Command {name} already exists."""
+
+
+class CommandNotExists(CommandException):
+    """Command {name} doesn't exist."""
 
 
 class InvalidArgument(CommandException):
@@ -16,16 +24,24 @@ class CheckFailed(CommandException):
 
 
 class InvalidModule(CommandException):
-    """Unable to find module. Check if path is correct."""
+    """Unable to find module {path}. Check if path is correct."""
+
+
+class ModuleAlreadyLoaded(CommandException):
+    """Module {path} is already loaded."""
 
 
 class ModuleNotLoaded(CommandException):
-    """This module is never loaded."""
+    """Module {path} is never loaded."""
 
 
 class MissingLoadFunction(CommandException):
-    """This module is missing "load" function."""
+    """Module {path} is missing "load" function."""
 
 
 class MissingUnloadFunction(CommandException):
-    """This module is missing "unload" function."""
+    """Module {path} is missing "unload" function."""
+
+
+class AddonAlreadyLoaded(CommandException):
+    """Addon {name} is already loaded."""

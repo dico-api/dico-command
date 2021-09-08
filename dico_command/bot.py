@@ -6,7 +6,7 @@ import importlib
 import dico
 from .command import Command
 from .context import Context
-from .exception import InvalidArgument, InvalidModule, MissingLoadFunction, MissingUnloadFunction, ModuleNotLoaded
+from .exception import *
 from .utils import smart_split, is_coro
 
 if typing.TYPE_CHECKING:
@@ -25,6 +25,7 @@ class Bot(dico.Client):
         super().__init__(token, intents=intents, default_allowed_mentions=default_allowed_mentions, loop=loop, cache=cache)
         self.prefixes = [prefix] if not isinstance(prefix, list) else prefix
         self.commands = {}
+        self.aliases = {}
         self.logger = logging.Logger("dico_command")
         self.on("MESSAGE_CREATE", self.execute_handler)
         self.addons: typing.List[Addon] = []
@@ -48,10 +49,10 @@ class Bot(dico.Client):
         raw_ipt = cont[len(prefix_result):]
         ipt = raw_ipt.split(maxsplit=1)
         name = ipt[0]
-        cmd = self.commands.get(name)
+        cmd = self.commands.get(self.aliases.get(name, name))
         if not cmd:
             return
-        context = Context.from_message(message, prefix_result, cmd)
+        context = Context.from_message(message, prefix_result, cmd, name)
         try:
             try:
                 args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data)
@@ -64,18 +65,25 @@ class Bot(dico.Client):
 
     def add_command(self, command: Command):
         if command.name in self.commands:
-            raise
+            raise CommandAlreadyExists(name=command.name)
         self.commands[command.name] = command
+        for x in command.aliases:
+            if x in self.aliases:
+                raise CommandAlreadyExists(name=x)
+            self.aliases[x] = command.name
         return command
 
     def remove_command(self, name: str):
         if name not in self.commands:
-            raise
-        del self.commands[name]
+            return
+        command = self.commands.pop(name)
+        for x in command.aliases:
+            if x in self.aliases:
+                del self.aliases[x]
 
-    def command(self, name: str = None):
+    def command(self, name: typing.Optional[str] = None, *, aliases: typing.Optional[typing.List[str]] = None):
         def wrap(func):
-            cmd = Command(func, name or func.__name__)
+            cmd = Command(func, name or func.__name__, aliases=aliases)
             self.add_command(cmd)
             return cmd
         return wrap
@@ -89,7 +97,7 @@ class Bot(dico.Client):
     def load_addons(self, *addons: typing.Type["Addon"]):
         for x in addons:
             if x.name in self.addon_names:
-                raise
+                raise AddonAlreadyLoaded(name=x.name)
             self.addon_names.append(x.name)
             loaded = x(self)
             self.addons.append(loaded)
@@ -130,13 +138,15 @@ class Bot(dico.Client):
         try:
             module = importlib.import_module(import_path)
             importlib.reload(module)
+            if module.__name__ in self.modules:
+                raise ModuleAlreadyLoaded(path=import_path)
             self.modules.append(module.__name__)
             if hasattr(module, "load"):
                 module.load(self)
             else:
-                raise MissingLoadFunction
+                raise MissingLoadFunction(path=import_path)
         except ImportError:
-            raise InvalidModule
+            raise InvalidModule(path=import_path)
 
     def unload_module(self, import_path: str):
         try:
@@ -146,11 +156,11 @@ class Bot(dico.Client):
                     module.unload(self)
                     self.modules.remove(module.__name__)
                 else:
-                    raise MissingUnloadFunction
+                    raise MissingUnloadFunction(path=import_path)
             else:
-                raise ModuleNotLoaded
+                raise ModuleNotLoaded(path=import_path)
         except ImportError:
-            raise InvalidModule
+            raise InvalidModule(path=import_path)
 
     def reload_module(self, import_path: str):
         self.unload_module(import_path)
