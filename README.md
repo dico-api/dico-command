@@ -36,7 +36,7 @@ addons/test.py:
 import dico_command
 
 
-class AddonTest(dico_command.Addon, name="Addon Test"):
+class AddonTest(dico_command.Addon, name="Addon Test"):  # name=... is optional
     @dico_command.command(name="addon")
     async def example(self, ctx: dico_command.Context):
         await ctx.send(f"Hello! This is addon `{self.name}`.")
