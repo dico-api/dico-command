@@ -43,11 +43,17 @@ class Bot(dico.Client):
 
     async def execute_handler(self, message: dico.Message):
         cont = message.content
+        if not cont:
+            return
         prefix_result = await self.verify_prefix(message)
         if prefix_result is None:
             return
         raw_ipt = cont[len(prefix_result):]
+        if not raw_ipt:
+            return
         ipt = raw_ipt.split(maxsplit=1)
+        if not ipt:
+            return
         name = ipt[0]
         cmd = self.commands.get(self.aliases.get(name, name))
         if not cmd:
