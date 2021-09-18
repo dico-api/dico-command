@@ -22,8 +22,10 @@ def read_function(func):
     return ret
 
 
-def smart_split(ipt: str, args_data: dict, splitter: str = " ") -> typing.Tuple[list, dict]:
+def smart_split(ipt: str, args_data: dict, splitter: str = " ", subcommand: bool = False) -> typing.Tuple[list, dict]:
     if len(args_data) == 0:
+        if subcommand and ipt:
+            return [*ipt.split(splitter)], {}
         return [], {}
     raw_split = ipt.split(splitter)
     # TODO: handle "..."

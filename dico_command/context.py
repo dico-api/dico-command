@@ -9,6 +9,7 @@ class Context(Message):
         self.prefix = prefix
         self.command = command
         self.name_used = name_used
+        self.subcommand_name = None
 
     @classmethod
     def from_message(cls, message: Message, prefix, command, name_used):

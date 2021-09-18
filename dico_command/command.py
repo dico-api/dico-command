@@ -1,7 +1,7 @@
 import typing
 from .context import Context
-from .exception import CheckFailed
-from .utils import read_function, is_coro
+from .exception import CheckFailed, InvalidArgument
+from .utils import read_function, is_coro, smart_split
 
 
 class Command:
@@ -14,11 +14,19 @@ class Command:
         self.name = name
         self.checks = checks or []
         self.aliases = aliases or []
+        self.subcommands = {}
 
         self.args_data = read_function(self.func)
         if hasattr(func, "_checks"):
             self.checks.extend(func._checks)
         self.addon = None
+
+    def subcommand(self, *args, **kwargs):
+        def wrap(coro):
+            cmd = command(*args, **kwargs)(coro)
+            self.subcommands[cmd.name] = cmd
+            return cmd
+        return wrap
 
     def register_addon(self, addon):
         self.addon = addon
@@ -30,8 +38,33 @@ class Command:
     async def invoke(self, ctx: Context, *args, **kwargs):
         if not await self.evaluate_checks(ctx):
             raise CheckFailed
-        init_args = (ctx,) if self.addon is None else (self.addon, ctx)
-        return await self.func(*init_args, *args, **kwargs)
+        tgt = self.func
+        args = [*args]
+        subcommand_invoking = False
+        subcommand_name = None
+        subcommand = None
+        if self.subcommands:
+            if args and args[0] in self.subcommands:
+                subcommand = self.subcommands[args[0]]
+                tgt = subcommand.invoke
+                del args[0]
+                subcommand_invoking = True
+            elif kwargs and [*kwargs.values()][0] in self.subcommands:
+                subcommand = kwargs.pop([*kwargs.keys()][0])
+                tgt = subcommand.invoke
+                subcommand_invoking = True
+            elif kwargs or args:
+                raise InvalidArgument("unknown subcommand or invalid argument passed.")
+        elif (args or kwargs) and not self.args_data:
+            raise InvalidArgument("invalid argument data.")
+        if subcommand_invoking:
+            ctx.subcommand_name = subcommand_name
+            msg = ctx.content
+            ipt = msg.split(maxsplit=1)
+            ipt = ipt[1].split(maxsplit=1) if len(ipt) > 1 else []
+            args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", subcommand.args_data, subcommand=bool(subcommand.subcommands))
+        init_args = (ctx,) if self.addon is None or subcommand_invoking else (self.addon, ctx)
+        return await tgt(*init_args, *args, **kwargs)
 
 
 def command(name: typing.Optional[str] = None, *, aliases: typing.Optional[typing.List[str]] = None):

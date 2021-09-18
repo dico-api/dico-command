@@ -55,7 +55,7 @@ class Bot(dico.Client):
         context = Context.from_message(message, prefix_result, cmd, name)
         try:
             try:
-                args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data)
+                args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data, subcommand=bool(cmd.subcommands))
             except Exception as ex:
                 raise InvalidArgument from ex
             self.logger.debug(f"Command {name} executed.")
