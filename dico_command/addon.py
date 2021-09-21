@@ -64,3 +64,6 @@ class Addon:
 
     async def on_addon_command_error(self, ctx, ex):  # noqa
         return False
+
+    async def on_addon_interaction_error(self, interaction, ex):  # noqa
+        return False
