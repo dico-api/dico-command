@@ -139,6 +139,7 @@ class Bot(dico.Client):
                             self.interaction.remove_command(t)
                         for cc in addon.callbacks:
                             self.interaction.remove_callback(cc)
+                    addon.on_unload()
 
     def load_module(self, import_path: str):
         try:

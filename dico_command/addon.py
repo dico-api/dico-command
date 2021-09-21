@@ -47,6 +47,13 @@ class Addon:
         self.listeners: typing.List[Listener] = [x for x in resp if isinstance(x, Listener)]
         self.interactions: typing.List["InteractionCommand"] = [x for x in resp if InteractionCommand is not None and isinstance(x, InteractionCommand)]
         self.callbacks: typing.List["ComponentCallback"] = [x for x in resp if ComponentCallback is not None and isinstance(x, ComponentCallback)]
+        self.on_load()
 
     def __str__(self):
         return self.name
+
+    def on_load(self):
+        pass
+
+    def on_unload(self):
+        pass
