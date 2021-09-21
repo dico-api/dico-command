@@ -6,7 +6,7 @@ Command handler for dico.
 :license: MIT
 """
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 from .addon import *
 from .bot import *
