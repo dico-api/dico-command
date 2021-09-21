@@ -8,6 +8,7 @@ except ImportError:
 
 if typing.TYPE_CHECKING:
     from .bot import Bot
+    from .context import Context
 
 
 class Listener:
@@ -57,3 +58,9 @@ class Addon:
 
     def on_unload(self):
         pass
+
+    async def addon_check(self, ctx):  # noqa
+        return True
+
+    async def on_addon_command_error(self, ctx, ex):  # noqa
+        return False

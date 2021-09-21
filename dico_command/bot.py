@@ -67,7 +67,7 @@ class Bot(dico.Client):
             self.logger.debug(f"Command {name} executed.")
             await cmd.invoke(context, *args, **kwargs)
         except Exception as ex:
-            self.handle_command_error(context, ex)
+            await self.handle_command_error(context, ex)
 
     def add_command(self, command: Command):
         if command.name in self.commands:
@@ -94,7 +94,11 @@ class Bot(dico.Client):
             return cmd
         return wrap
 
-    def handle_command_error(self, context, ex):
+    async def handle_command_error(self, context, ex):
+        if await context.command.execute_error_handler(context, ex):
+            return
+        if context.command.addon and await context.command.addon.on_addon_command_error(context, ex):
+            return
         if not self.events.get("COMMAND_ERROR"):
             self.logger.error(f"Error while executing command '{context.command.name}':\n"+''.join(traceback.format_exception(type(ex), ex, ex.__traceback__)))
         else:

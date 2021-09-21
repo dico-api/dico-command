@@ -15,6 +15,7 @@ class Command:
         self.checks = checks or []
         self.aliases = aliases or []
         self.subcommands = {}
+        self.error_handler = None
 
         self.args_data = read_function(self.func)
         if hasattr(func, "_checks"):
@@ -31,7 +32,19 @@ class Command:
     def register_addon(self, addon):
         self.addon = addon
 
+    async def execute_error_handler(self, ctx, ex):
+        if not self.error_handler:
+            return False
+        args = (self.addon, ctx, ex) if self.addon else (ctx, ex)
+        return await self.error_handler(*args)
+
+    def on_error(self, coro):
+        self.error_handler = coro
+        return coro
+
     async def evaluate_checks(self, ctx: Context):
+        if self.addon and not await self.addon.addon_check(ctx):
+            return False
         resp = [n for n in [(await x(ctx)) if is_coro(x) else x(ctx) for x in self.checks] if not n]
         return not resp
 
