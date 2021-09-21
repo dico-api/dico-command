@@ -44,7 +44,7 @@ class Addon:
     def __init__(self, bot: "Bot"):
         self.bot = bot
         resp = [getattr(self, x) for x in dir(self)]
-        self.commands: typing.List[Command] = [x for x in resp if isinstance(x, Command)]
+        self.commands: typing.List[Command] = [x for x in resp if isinstance(x, Command) and not x.is_subcommand]
         self.listeners: typing.List[Listener] = [x for x in resp if isinstance(x, Listener)]
         self.interactions: typing.List["InteractionCommand"] = [x for x in resp if InteractionCommand is not None and isinstance(x, InteractionCommand)]
         self.callbacks: typing.List["ComponentCallback"] = [x for x in resp if ComponentCallback is not None and isinstance(x, ComponentCallback)]

@@ -9,7 +9,8 @@ class Command:
                  func,
                  name: str,
                  checks: typing.Optional[typing.List[typing.Callable[[Context], bool]]] = None,
-                 aliases: typing.Optional[typing.List[str]] = None):
+                 aliases: typing.Optional[typing.List[str]] = None,
+                 is_subcommand: bool = False):
         self.func = func
         self.name = name
         self.checks = checks or []
@@ -21,16 +22,20 @@ class Command:
         if hasattr(func, "_checks"):
             self.checks.extend(func._checks)
         self.addon = None
+        self.is_subcommand = is_subcommand
 
     def subcommand(self, *args, **kwargs):
         def wrap(coro):
             cmd = command(*args, **kwargs)(coro)
+            cmd.is_subcommand = True
             self.subcommands[cmd.name] = cmd
             return cmd
         return wrap
 
     def register_addon(self, addon):
         self.addon = addon
+        for x in self.subcommands.values():
+            x.register_addon(addon)
 
     async def execute_error_handler(self, ctx, ex):
         if not self.error_handler:

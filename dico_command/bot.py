@@ -32,6 +32,11 @@ class Bot(dico.Client):
         self.addon_names: typing.List[str] = []
         self.modules: typing.List[str] = []
 
+    async def get_owners(self) -> typing.List[dico.Snowflake]:
+        if not self.application:
+            await self.request_current_bot_application_information()
+        return self.application.owner_ids if self.application.owner_ids else [self.application.owner.id]
+
     async def verify_prefix(self, message: dico.Message):
         final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
         prefix_result = [*map(lambda x: message.content.startswith(x), final_prefixes)]
