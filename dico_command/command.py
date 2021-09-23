@@ -8,7 +8,7 @@ class Command:
     def __init__(self,
                  func,
                  name: str,
-                 checks: typing.Optional[typing.List[typing.Callable[[Context], bool]]] = None,
+                 checks: typing.Optional[typing.List[typing.Callable[[Context], typing.Union[bool, typing.Awaitable[bool]]]]] = None,
                  aliases: typing.Optional[typing.List[str]] = None,
                  is_subcommand: bool = False):
         self.func = func

@@ -3,7 +3,7 @@ from .command import Command
 from .context import Context
 
 
-def checks(*funcs: typing.Callable[[Context], bool]):
+def checks(*funcs: typing.Callable[[Context], typing.Union[bool, typing.Awaitable[bool]]]):
     def wrap(maybe_cmd):
         if isinstance(maybe_cmd, Command):
             maybe_cmd.checks.extend(funcs)
