@@ -1,4 +1,5 @@
 import typing
+import asyncio
 import inspect
 import logging
 import traceback
@@ -16,13 +17,25 @@ if typing.TYPE_CHECKING:
 class Bot(dico.Client):
     def __init__(self,
                  token: str,
-                 prefix: typing.Union[str, list, typing.Callable[[dico.Message], typing.Union[typing.Awaitable[str], str]]],
+                 prefix: typing.Union[str, typing.List[str], typing.Callable[[dico.Message], typing.Union[typing.Awaitable[str], str, typing.List[typing.Union[typing.Awaitable[str], str]]]]],
                  *,
                  intents: dico.Intents = dico.Intents.no_privileged(),
-                 default_allowed_mentions: dico.AllowedMentions = None,
-                 loop=None,
-                 cache: bool = True):
-        super().__init__(token, intents=intents, default_allowed_mentions=default_allowed_mentions, loop=loop, cache=cache)
+                 default_allowed_mentions: typing.Optional[dico.AllowedMentions] = None,
+                 loop: typing.Optional[asyncio.AbstractEventLoop] = None,
+                 cache: bool = True,
+                 application_id: typing.Optional[dico.Snowflake.TYPING] = None,
+                 monoshard: bool = False,
+                 shard_count: typing.Optional[int] = None,
+                 **cache_max_sizes: int):
+        super().__init__(token,
+                         intents=intents,
+                         default_allowed_mentions=default_allowed_mentions,
+                         loop=loop,
+                         cache=cache,
+                         application_id=application_id,
+                         monoshard=monoshard,
+                         shard_count=shard_count,
+                         **cache_max_sizes)
         self.prefixes = [prefix] if not isinstance(prefix, list) else prefix
         self.commands = {}
         self.aliases = {}
@@ -38,8 +51,24 @@ class Bot(dico.Client):
         return self.application.owner_ids if self.application.owner_ids else [self.application.owner.id]
 
     async def verify_prefix(self, message: dico.Message):
-        final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
-        prefix_result = [*map(lambda x: message.content.startswith(x), final_prefixes)]
+        # final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
+        final_prefixes = []
+        for x in self.prefixes:
+            if is_coro(x):
+                resp = await x(message)
+                if isinstance(resp, str):
+                    final_prefixes.append(resp)
+                else:
+                    final_prefixes.extend(resp)
+            elif inspect.isfunction(x):
+                resp = x(message)
+                if isinstance(resp, str):
+                    final_prefixes.append(resp)
+                else:
+                    final_prefixes.extend(resp)  # noqa
+            else:
+                final_prefixes.append(x)
+        prefix_result = [*map(lambda n: message.content.startswith(n), final_prefixes)]
         if len(set(prefix_result)) != 2 and False in prefix_result:
             return
         for i, r in enumerate(prefix_result):
