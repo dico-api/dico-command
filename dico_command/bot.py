@@ -76,6 +76,8 @@ class Bot(dico.Client):
                 return final_prefixes[i]
 
     async def execute_handler(self, message: dico.Message):
+        if message.author.bot:
+            return
         cont = message.content
         if not cont:
             return
