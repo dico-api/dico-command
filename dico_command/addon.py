@@ -1,10 +1,11 @@
 import typing
 from .command import Command
 try:
-    from dico_interaction import InteractionCommand, ComponentCallback
+    from dico_interaction import InteractionCommand, ComponentCallback, AutoComplete
 except ImportError:
     InteractionCommand = None
     ComponentCallback = None
+    AutoComplete = None
 
 if typing.TYPE_CHECKING:
     from .bot import Bot
@@ -48,6 +49,7 @@ class Addon:
         self.listeners: typing.List[Listener] = [x for x in resp if isinstance(x, Listener)]
         self.interactions: typing.List["InteractionCommand"] = [x for x in resp if InteractionCommand is not None and isinstance(x, InteractionCommand)]
         self.callbacks: typing.List["ComponentCallback"] = [x for x in resp if ComponentCallback is not None and isinstance(x, ComponentCallback)]
+        self.autocompletes: typing.List["AutoComplete"] = [x for x in resp if AutoComplete is not None and isinstance(x, AutoComplete)]
         self.on_load()
 
     def __str__(self):

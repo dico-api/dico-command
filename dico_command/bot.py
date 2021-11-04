@@ -160,6 +160,9 @@ class Bot(dico.Client):
                 for cc in loaded.callbacks:
                     cc.register_self_or_cls(loaded)
                     self.interaction.add_callback(cc)
+                for ac in loaded.autocompletes:
+                    ac.register_self_or_cls(loaded)
+                    self.interaction.add_autocomplete(ac)
 
     def unload_addons(self, *addons: typing.Union[str, typing.Type["Addon"]]):
         for x in addons:
@@ -179,6 +182,8 @@ class Bot(dico.Client):
                             self.interaction.remove_command(t)
                         for cc in addon.callbacks:
                             self.interaction.remove_callback(cc)
+                        for ac in addon.autocompletes:
+                            self.interaction.remove_autocomplete(ac)
                     addon.on_unload()
 
     def load_module(self, import_path: str):
