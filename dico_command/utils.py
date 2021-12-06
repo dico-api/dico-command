@@ -39,6 +39,7 @@ def smart_split(ipt: str, args_data: dict, subcommand: bool = False) -> typing.T
     last_arg = args_data[args_name[-1]]
     var_positional_in = True in [*map(lambda n: n["kind"] == n["kind"].VAR_POSITIONAL, args_data.values())]
     keyword_only_count = len([x for x in args_data.values() if x["kind"] == x["kind"].KEYWORD_ONLY])
+    all_optional = bool([x for x in args_data.values() if x["required"] is False])
     if len(args_data) == 1:
         if last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:
             if ipt:
@@ -54,14 +55,17 @@ def smart_split(ipt: str, args_data: dict, subcommand: bool = False) -> typing.T
             return [initial_split[0]] if initial_split else [], {}
     if (len(initial_split) == len(args_data) and not keyword_only_count) or last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:  # assuming this matches
         return initial_split, {}
-    if len(initial_split) != len(args_data) and not var_positional_in and not keyword_only_count:
+    if len(initial_split) != len(args_data) and not var_positional_in and not keyword_only_count and not all_optional:
         raise ValueError("argument count does not match.")
     if keyword_only_count > 1:
         raise AttributeError("maximum keyword-only param number is 1.")
     args = []
     kwargs = {}
     if not ipt.replace(" ", ""):
-        raise ValueError("empty input.")
+        for v in args_data.values():
+            if v["required"]:
+                raise ValueError("empty input.")
+        return [], {}
     for i, x in enumerate(args_data.items()):
         k, v = x
         if v["kind"] == v["kind"].KEYWORD_ONLY:
@@ -70,7 +74,10 @@ def smart_split(ipt: str, args_data: dict, subcommand: bool = False) -> typing.T
             kwargs[k] = ipt or None
             # TODO: fix kwargs is added even if it is not present
             break
-        args.append(initial_split[i])
+        if i < len(initial_split):
+            args.append(initial_split[i])
+        else:
+            break
         ipt = ipt.split(initial_split[i], 1)[-1].lstrip()
     return args, kwargs
 

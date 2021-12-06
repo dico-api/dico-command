@@ -5,7 +5,6 @@ import logging
 import traceback
 import importlib
 import dico
-from contextlib import suppress
 from .command import Command
 from .context import Context
 from .converter import AVAILABLE_CONVERTERS, ConverterBase
@@ -254,11 +253,11 @@ class Bot(dico.Client):
             importlib.reload(module)
             if module.__name__ in self.modules:
                 raise ModuleAlreadyLoaded(path=import_path)
-            self.modules.append(module.__name__)
             if hasattr(module, "load"):
                 module.load(self)
             else:
                 raise MissingLoadFunction(path=import_path)
+            self.modules.append(module.__name__)
         except ImportError:
             raise InvalidModule(path=import_path)
 

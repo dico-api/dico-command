@@ -63,7 +63,7 @@ class UserConverter(ConverterBase):
 
 
 class GuildMemberConverter(ConverterBase):
-    CONVERT_TYPE =dico. GuildMember
+    CONVERT_TYPE = dico.GuildMember
 
     def __init__(self, bot: "Bot"):
         super().__init__(bot)
