@@ -45,3 +45,7 @@ class MissingUnloadFunction(CommandException):
 
 class AddonAlreadyLoaded(CommandException):
     """Addon {name} is already loaded."""
+
+
+class ConversionFailed(CommandException):
+    """Converting {value} has failed."""

@@ -25,6 +25,9 @@ class Command:
         self.is_subcommand = is_subcommand
 
     def subcommand(self, *args, **kwargs):
+        if self.is_subcommand:
+            raise AttributeError("unable to create subcommand in subcommand.")
+
         def wrap(coro):
             cmd = command(*args, **kwargs)(coro)
             cmd.is_subcommand = True
@@ -68,11 +71,13 @@ class Command:
                 del args[0]
                 subcommand_invoking = True
             elif kwargs and [*kwargs.values()][0] in self.subcommands:
-                subcommand = kwargs.pop([*kwargs.keys()][0])
+                subcommand = self.subcommands[kwargs.pop([*kwargs.keys()][0])]
                 tgt = subcommand.invoke
                 subcommand_invoking = True
-            elif kwargs or args:
+            elif (args or kwargs) and not self.args_data:
                 raise InvalidArgument("unknown subcommand or invalid argument passed.")
+            else:
+                args, kwargs = await ctx.bot.convert_args(ctx, self.args_data, args, kwargs)
         elif (args or kwargs) and not self.args_data:
             raise InvalidArgument("invalid argument data.")
         if subcommand_invoking:
@@ -81,6 +86,8 @@ class Command:
             ipt = msg.split(maxsplit=1)
             ipt = ipt[1].split(maxsplit=1) if len(ipt) > 1 else []
             args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", subcommand.args_data, subcommand=bool(subcommand.subcommands))
+            if not subcommand.subcommands:
+                args, kwargs = await ctx.bot.convert_args(ctx, subcommand.args_data, args, kwargs)
         init_args = (ctx,) if self.addon is None or subcommand_invoking else (self.addon, ctx)
         return await tgt(*init_args, *args, **kwargs)
 

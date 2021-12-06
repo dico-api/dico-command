@@ -5,8 +5,10 @@ import logging
 import traceback
 import importlib
 import dico
+from contextlib import suppress
 from .command import Command
 from .context import Context
+from .converter import AVAILABLE_CONVERTERS, ConverterBase
 from .exception import *
 from .utils import smart_split, is_coro
 
@@ -26,6 +28,7 @@ class Bot(dico.Client):
                  application_id: typing.Optional[dico.Snowflake.TYPING] = None,
                  monoshard: bool = False,
                  shard_count: typing.Optional[int] = None,
+                 shard_id: typing.Optional[int] = None,
                  **cache_max_sizes: int):
         super().__init__(token,
                          intents=intents,
@@ -35,6 +38,7 @@ class Bot(dico.Client):
                          application_id=application_id,
                          monoshard=monoshard,
                          shard_count=shard_count,
+                         shard_id=shard_id,
                          **cache_max_sizes)
         self.prefixes = [prefix] if not isinstance(prefix, list) else prefix
         self.commands = {}
@@ -98,12 +102,70 @@ class Bot(dico.Client):
         try:
             try:
                 args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", cmd.args_data, subcommand=bool(cmd.subcommands))
+                if not cmd.subcommands:
+                    args, kwargs = await self.convert_args(context, cmd.args_data, args, kwargs)
             except Exception as ex:
                 raise InvalidArgument from ex
             self.logger.debug(f"Command {name} executed.")
             await cmd.invoke(context, *args, **kwargs)
         except Exception as ex:
             await self.handle_command_error(context, ex)
+
+    def get_converter(self, convert_type: typing.Any):
+        if convert_type in [str, int, float, bool]:
+            return convert_type
+        elif convert_type == dico.Snowflake:
+            return dico.Snowflake.ensure_snowflake
+        elif issubclass(convert_type, ConverterBase):
+            return convert_type(self)
+        elif convert_type in AVAILABLE_CONVERTERS:
+            return AVAILABLE_CONVERTERS[convert_type](self)
+
+    @staticmethod
+    async def convert(context, value, *converters, safe: bool = False) -> typing.Optional[typing.Any]:
+        orig = value
+        for x in converters:
+            if isinstance(x, ConverterBase):
+                value = await x(context, orig)
+            elif is_coro(x):
+                value = await x(orig)
+            else:
+                value = x(orig)
+            if value:
+                return value
+        if not safe:
+            raise ConversionFailed(value=orig)
+        return value
+
+    async def convert_args(self, context: Context, args_data: dict, args: typing.List[str], kwargs: typing.Dict[str, str]) \
+            -> typing.Tuple[typing.List[typing.Any], typing.Dict[str, typing.Any]]:
+        for i, x in enumerate(args.copy()):
+            convert_type = [*args_data.values()][i]["annotation"]
+            if not convert_type:
+                continue
+            converters = []
+            if hasattr(convert_type, "__origin__") and convert_type.__origin__ is typing.Union:
+                for t in convert_type.__args__:
+                    if t is not None:
+                        converters.append(self.get_converter(t))
+            else:
+                converters.append(self.get_converter(convert_type))
+            resp = await self.convert(context, x, *[x for x in converters if x])
+            args[i] = resp
+        for k, v in kwargs.items():
+            convert_type = args_data[k]["annotation"]
+            if not convert_type:
+                continue
+            converters = []
+            if hasattr(convert_type, "__origin__") and convert_type.__origin__ is typing.Union:
+                for t in convert_type.__args__:
+                    if t is not None:
+                        converters.append(self.get_converter(t))
+            else:
+                converters.append(self.get_converter(convert_type))
+            resp = await self.convert(context, v, *[x for x in converters if x])
+            kwargs[k] = resp
+        return args, kwargs
 
     def add_command(self, command: Command):
         if command.name in self.commands:

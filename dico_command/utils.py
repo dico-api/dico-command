@@ -1,5 +1,11 @@
+import re
 import typing
 import inspect
+
+
+SPLIT_PATTERN = re.compile(r'((".+")|[.\S]+)')
+FMT_REGEX = re.compile(r'^<[at]?(:[^:]*)?(@[!&]?|#|:)(\d+)(:)?.*>$')
+T = typing.TypeVar("T")
 
 
 def is_coro(coro):
@@ -16,19 +22,18 @@ def read_function(func):
         ret[x.name] = {
             "required": x.default == inspect._empty,  # noqa
             "default": x.default,
-            "annotation": x.annotation,
+            "annotation": x.annotation if x.annotation != inspect._empty else None,  # noqa
             "kind": x.kind
         }
     return ret
 
 
-def smart_split(ipt: str, args_data: dict, splitter: str = " ", subcommand: bool = False) -> typing.Tuple[list, dict]:
+def smart_split(ipt: str, args_data: dict, subcommand: bool = False) -> typing.Tuple[list, dict]:
     if len(args_data) == 0:
         if subcommand and ipt:
-            return [*ipt.split(splitter)], {}
+            return [*[x[0] for x in re.findall(SPLIT_PATTERN, ipt)]], {}
         return [], {}
-    raw_split = ipt.split(splitter)
-    # TODO: handle "..."
+    raw_split = [x[0] for x in re.findall(SPLIT_PATTERN, ipt)]
     initial_split = raw_split
     args_name = [*args_data.keys()]
     last_arg = args_data[args_name[-1]]
@@ -36,11 +41,17 @@ def smart_split(ipt: str, args_data: dict, splitter: str = " ", subcommand: bool
     keyword_only_count = len([x for x in args_data.values() if x["kind"] == x["kind"].KEYWORD_ONLY])
     if len(args_data) == 1:
         if last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:
-            return [ipt], {}
+            if ipt:
+                return [ipt], {}
+            else:
+                return [], {}
         elif last_arg["kind"] == last_arg["kind"].KEYWORD_ONLY:
-            return [], {args_name[-1]: ipt}
+            if ipt:
+                return [], {args_name[-1]: ipt}
+            else:
+                return [], {}
         else:
-            return [initial_split[0]], {}
+            return [initial_split[0]] if initial_split else [], {}
     if (len(initial_split) == len(args_data) and not keyword_only_count) or last_arg["kind"] == last_arg["kind"].VAR_POSITIONAL:  # assuming this matches
         return initial_split, {}
     if len(initial_split) != len(args_data) and not var_positional_in and not keyword_only_count:
@@ -62,3 +73,19 @@ def smart_split(ipt: str, args_data: dict, splitter: str = " ", subcommand: bool
         args.append(initial_split[i])
         ipt = ipt.split(initial_split[i], 1)[-1].lstrip()
     return args, kwargs
+
+
+def maybe_fmt(value: str) -> typing.Optional[str]:
+    match = FMT_REGEX.match(value)
+    if match:
+        return match.group(3)
+
+
+def search(items: typing.Sequence[T], **attributes) -> typing.Optional[T]:
+    for x in items:
+        for k, v in attributes.items():
+            resp = getattr(x, k)
+            if inspect.ismethod(resp):
+                resp = resp()
+            if resp == v:
+                return x
