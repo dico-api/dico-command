@@ -53,6 +53,9 @@ class Bot(dico.Client):
             await self.request_current_bot_application_information()
         return self.application.owner_ids if self.application.owner_ids else [self.application.owner.id]
 
+    async def is_owner(self, ctx: Context):
+        return ctx.author.id in await self.get_owners()
+
     async def verify_prefix(self, message: dico.Message):
         # final_prefixes = [(await x(message)) if is_coro(x) else x(message) if inspect.isfunction(x) else x for x in self.prefixes]
         final_prefixes = []
