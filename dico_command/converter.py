@@ -92,7 +92,7 @@ class ChannelConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or dico.Channel(self.bot, await self.bot.http.request_channel(maybe_id), ctx.guild_id)
+                return search(cached, id=maybe_id) or await self.bot.request_channel(maybe_id)
         from_name = search(cached, name=value)
         if from_name:
             return from_name
