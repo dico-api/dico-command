@@ -53,7 +53,7 @@ class UserConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or dico.User(self.bot, await self.bot.http.request_user(maybe_id))
+                return search(cached, id=maybe_id) or await self.bot.request_user(maybe_id)
         from_username = search(cached, username=value)
         if from_username:
             return from_username
