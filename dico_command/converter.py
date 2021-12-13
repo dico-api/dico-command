@@ -76,7 +76,7 @@ class GuildMemberConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or dico.GuildMember(self.bot, await self.bot.http.request_guild_member(ctx.guild_id, maybe_id), guild_id=ctx.guild_id)
+                return search(cached, id=maybe_id) or await self.bot.request_guild_member(ctx.guild_id, maybe_id)
         from_name = search(cached, __str__=value)
         if from_name:
             return from_name
