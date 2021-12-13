@@ -53,7 +53,7 @@ class UserConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or await self.bot.http.request_user(maybe_id)
+                return search(cached, id=maybe_id) or dico.User(self.bot, await self.bot.http.request_user(maybe_id))
         from_username = search(cached, username=value)
         if from_username:
             return from_username
@@ -76,7 +76,7 @@ class GuildMemberConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or await self.bot.http.request_user(maybe_id)
+                return search(cached, id=maybe_id) or dico.GuildMember(self.bot, await self.bot.http.request_guild_member(ctx.guild_id, maybe_id), guild_id=ctx.guild_id)
         from_name = search(cached, __str__=value)
         if from_name:
             return from_name
@@ -92,7 +92,7 @@ class ChannelConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or await self.bot.http.request_user(maybe_id)
+                return search(cached, id=maybe_id) or dico.Channel(self.bot, await self.bot.http.request_channel(maybe_id), ctx.guild_id)
         from_name = search(cached, name=value)
         if from_name:
             return from_name
@@ -107,7 +107,7 @@ class RoleConverter(ConverterBase):
         maybe_id = value if re.match(r"^\d+$", value) else maybe_mention
         with suppress(HTTPError):
             if maybe_id:
-                return search(cached, id=maybe_id) or await self.bot.http.request_user(maybe_id)
+                return search(cached, id=maybe_id) or search(await self.bot.http.request_guild_roles(ctx.guild_id), id=maybe_id)
         from_name = search(cached, name=value)
         if from_name:
             return from_name
