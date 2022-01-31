@@ -82,7 +82,7 @@ class Command:
             raise InvalidArgument("invalid argument data.")
         if subcommand_invoking:
             ctx.subcommand_name = subcommand_name
-            msg = ctx.content
+            msg = ctx.content[len(ctx.prefix):]
             ipt = msg.split(maxsplit=1)
             ipt = ipt[1].split(maxsplit=1) if len(ipt) > 1 else []
             args, kwargs = smart_split(ipt[1] if len(ipt) > 1 else "", subcommand.args_data, subcommand=bool(subcommand.subcommands))
