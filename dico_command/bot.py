@@ -219,7 +219,7 @@ class Bot(dico.Client):
             for event in addon.listeners:
                 event.register_addon(addon)
                 self.on_(event.event, event.func)
-            if hasattr(addon, "interaction"):
+            if hasattr(self, "interaction"):
                 for interaction in addon.interactions:
                     interaction.register_self_or_cls(addon)
                     self.interaction.add_command(interaction)
