@@ -205,28 +205,30 @@ class Bot(dico.Client):
             self.dispatch("command_error", context, ex)
 
     def load_addons(self, *addons: typing.Type["Addon"]):
-        for x in addons:
-            if x.name in self.addon_names:
-                raise AddonAlreadyLoaded(name=x.name)
-            self.addon_names.append(x.name)
-            loaded = x(self)
-            self.addons.append(loaded)
-            for c in loaded.commands:
-                c.register_addon(loaded)
-                self.add_command(c)
-            for e in loaded.listeners:
-                e.register_addon(loaded)
-                self.on_(e.event, e.func)
-            if hasattr(self, "interaction"):
-                for t in loaded.interactions:
-                    t.register_self_or_cls(loaded)
-                    self.interaction.add_command(t)
-                for cc in loaded.callbacks:
-                    cc.register_self_or_cls(loaded)
-                    self.interaction.add_callback(cc)
-                for ac in loaded.autocompletes:
-                    ac.register_self_or_cls(loaded)
-                    self.interaction.add_autocomplete(ac)
+        self.register_addons(*[addon(self) for addon in addons])
+
+    def register_addons(self, *addons: Addon):
+        for addon in addons:
+            if addon.name in self.addon_names:
+                raise AddonAlreadyLoaded(name=addon.name)
+            self.addon_names.append(addon.name)
+            self.addons.append(addon)
+            for command in addon.commands:
+                command.register_addon(addon)
+                self.add_command(command)
+            for event in addon.listeners:
+                event.register_addon(addon)
+                self.on_(event.event, event.func)
+            if hasattr(addon, "interaction"):
+                for interaction in addon.interactions:
+                    interaction.register_self_or_cls(addon)
+                    self.interaction.add_command(interaction)
+                for callback in addon.callbacks:
+                    callback.register_self_or_cls(addon)
+                    self.interaction.add_callback(callback)
+                for autocomplete in addon.autocompletes:
+                    autocomplete.register_self_or_cls(addon)
+                    self.interaction.add_autocomplete(autocomplete)
 
     def unload_addons(self, *addons: typing.Union[str, typing.Type["Addon"]]):
         for x in addons:
