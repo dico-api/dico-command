@@ -207,7 +207,7 @@ class Bot(dico.Client):
     def load_addons(self, *addons: typing.Type["Addon"]):
         self.register_addons(*[addon(self) for addon in addons])
 
-    def register_addons(self, *addons: Addon):
+    def register_addons(self, *addons: "Addon"):
         for addon in addons:
             if addon.name in self.addon_names:
                 raise AddonAlreadyLoaded(name=addon.name)
